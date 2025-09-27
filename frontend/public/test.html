@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 500px;
+        }
+        .success {
+            color: #28a745;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .button:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success">✅</div>
+        <h1>🌾 Farmora Server Test</h1>
+        <p>This is a plain HTML file served by your development server. If you can see this, your Vite server is running correctly.</p>
+        
+        <button class="button" onclick="testJS()">Test JavaScript</button>
+        <button class="button" onclick="goBack()">Back to App</button>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px;">
+            <strong>Server Status:</strong> ✅ Online<br>
+            <strong>Port:</strong> 3000<br>
+            <strong>Time:</strong> <span id="time"></span>
+        </div>
+    </div>
+
+    <script>
+        function testJS() {
+            alert('✅ JavaScript is working correctly!');
+        }
+        
+        function goBack() {
+            window.location.href = '/';
+        }
+        
+        function updateTime() {
+            document.getElementById('time').textContent = new Date().toLocaleTimeString();
+        }
+        
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        console.log('✅ Plain HTML test page loaded successfully');
+    </script>
+</body>
+</html>

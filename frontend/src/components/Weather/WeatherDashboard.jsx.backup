@@ -1,0 +1,625 @@
+// src/components/Weather/WeatherDashboard.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Cloud,
+  CloudRain,
+  Sun,
+  CloudSnow,
+  Wind,
+  Eye,
+  Droplets,
+  Thermometer,
+  Gauge,
+  Sunrise,
+  Sunset,
+  Moon,
+  AlertTriangle,
+  MapPin,
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Zap
+} from 'lucide-react';
+import apiService from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
+import GoogleWeatherUI from './GoogleWeatherUI';
+import './WeatherDashboard.css';
+
+const WeatherDashboard = ({ location }) => {
+  const [weatherData, setWeatherData] = useState(null);
+  const [forecastData, setForecastData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState('hourly');
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [alerts, setAlerts] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const { user } = useAuth();
+  const updateInterval = useRef(null);
+
+  // Weather icon mapping
+  const getWeatherIcon = (condition, isDay = true) => {
+    const icons = {
+      'clear': isDay ? Sun : Moon,
+      'partly-cloudy': Cloud,
+      'cloudy': Cloud,
+      'overcast': Cloud,
+      'rain': CloudRain,
+      'light-rain': CloudRain,
+      'heavy-rain': CloudRain,
+      'snow': CloudSnow,
+      'thunderstorm': Zap,
+      'fog': Cloud,
+      'mist': Cloud
+    };
+    
+    return icons[condition?.toLowerCase()] || (isDay ? Sun : Moon);
+  };
+
+  // Fetch weather data
+  const fetchWeatherData = async (showRefreshIndicator = false) => {
+    if (showRefreshIndicator) {
+      setRefreshing(true);
+    }
+    
+    try {
+      const coords = location || { latitude: 20.2961, longitude: 85.8245 }; // Bhubaneswar, Odisha
+      
+      // Fetch current weather and forecast
+      const [currentWeather, forecast, weatherAlerts] = await Promise.all([
+        apiService.getCurrentWeather(coords.latitude, coords.longitude),
+        apiService.getWeatherForecast(coords.latitude, coords.longitude, 7),
+        apiService.getWeatherAlerts(coords.latitude, coords.longitude).catch(() => ({ alerts: [] }))
+      ]);
+
+      if (currentWeather.success) {
+        setWeatherData({
+          ...currentWeather.data,
+          location: 'Jatani, Odisha', // You can get this from reverse geocoding
+          coordinates: coords
+        });
+      }
+
+      if (forecast.success) {
+        setForecastData(forecast.data);
+      }
+
+      if (weatherAlerts.alerts) {
+        setAlerts(weatherAlerts.alerts);
+      }
+
+      setLastUpdated(new Date());
+      setError(null);
+    } catch (err) {
+      setError('Unable to fetch weather data');
+      console.error('Weather fetch error:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Auto-refresh weather data
+  useEffect(() => {
+    fetchWeatherData();
+    
+    // Set up auto-refresh every 10 minutes
+    updateInterval.current = setInterval(() => {
+      fetchWeatherData();
+    }, 10 * 60 * 1000);
+
+    return () => {
+      if (updateInterval.current) {
+        clearInterval(updateInterval.current);
+      }
+    };
+  }, [location]);
+
+  // Manual refresh
+  const handleRefresh = () => {
+    fetchWeatherData(true);
+  };
+
+  // Generate hourly data for today
+  const generateHourlyData = () => {
+    if (!weatherData) return [];
+    
+    const hours = [];
+    const now = new Date();
+    const currentTemp = weatherData.temperature;
+    
+    for (let i = 0; i < 24; i++) {
+      const time = new Date(now);
+      time.setHours(now.getHours() + i);
+      
+      // Simulate temperature variation
+      const tempVariation = Math.sin((i / 24) * 2 * Math.PI) * 5;
+      const temperature = Math.round(currentTemp + tempVariation + (Math.random() - 0.5) * 3);
+      
+      // Simulate precipitation probability
+      const precipitationChance = weatherData.weather?.includes('rain') 
+        ? Math.max(0, Math.random() * 80) 
+        : Math.random() * 30;
+
+      hours.push({
+        time: time.getHours(),
+        temperature,
+        condition: i < 6 ? weatherData.weather : 
+                  i < 12 ? (Math.random() > 0.7 ? 'partly-cloudy' : 'clear') :
+                  i < 18 ? (Math.random() > 0.5 ? 'cloudy' : 'partly-cloudy') :
+                  weatherData.weather,
+        precipitation: Math.round(precipitationChance),
+        humidity: weatherData.humidity + (Math.random() - 0.5) * 10,
+        windSpeed: weatherData.windSpeed + (Math.random() - 0.5) * 5
+      });
+    }
+    
+    return hours;
+  };
+
+  const hourlyData = generateHourlyData();
+
+  if (loading) {
+    return (
+      <div className="weather-dashboard loading">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading weather data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="weather-dashboard error">
+        <div className="error-container">
+          <AlertTriangle className="error-icon" />
+          <h3>Weather Unavailable</h3>
+          <p>{error}</p>
+          <button onClick={handleRefresh} className="retry-btn">
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const WeatherIcon = getWeatherIcon(weatherData?.weather);
+  const isDay = new Date().getHours() >= 6 && new Date().getHours() < 18;
+
+  // Get user's location or use default
+  const coords = location || { latitude: 20.2961, longitude: 85.8245 }; // Bhubaneswar, Odisha
+  const locationName = weatherData?.location || 'Jatani, Odisha';
+
+  return (
+    <div className="weather-dashboard-container">
+      <GoogleWeatherUI 
+        latitude={coords.latitude}
+        longitude={coords.longitude}
+        locationName={locationName}
+      />
+      
+      {/* Additional farming-specific weather information */}
+      <div className="farming-weather-insights">
+        <h3>Farming Weather Insights</h3>
+        
+        {weatherData && (
+          <div className="insights-grid">
+            <div className="insight-card">
+              <h4>Irrigation Recommendation</h4>
+              <p>
+                {weatherData.humidity > 80 
+                  ? "High humidity - reduce irrigation" 
+                  : weatherData.humidity < 40 
+                  ? "Low humidity - increase irrigation" 
+                  : "Normal irrigation schedule"}
+              </p>
+            </div>
+            
+            <div className="insight-card">
+              <h4>Crop Protection</h4>
+              <p>
+                {weatherData.weather?.includes('rain') 
+                  ? "Consider fungicide application" 
+                  : weatherData.temperature > 35 
+                  ? "Provide shade protection" 
+                  : "Good conditions for crop growth"}
+              </p>
+            </div>
+            
+            <div className="insight-card">
+              <h4>Field Work Suitability</h4>
+              <p>
+                {weatherData.windSpeed > 15 
+                  ? "Avoid spraying operations" 
+                  : weatherData.weather?.includes('rain') 
+                  ? "Postpone field operations" 
+                  : "Suitable for field activities"}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+      {/* Current weather section */}
+      <div className="current-weather">
+        <div className="weather-main">
+          <div className="weather-icon-container">
+            <WeatherIcon className="weather-icon" />
+            <div className="weather-animation">
+              {weatherData?.weather?.includes('rain') && (
+                <div className="rain-drops">
+                  {[...Array(20)].map((_, i) => (
+                    <div key={i} className="rain-drop" style={{
+                      left: `${Math.random() * 100}%`,
+                      animationDelay: `${Math.random() * 2}s`
+                    }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="temperature-info">
+            <h1 className="temperature">{Math.round(weatherData?.temperature || 28)}°C</h1>
+            <p className="condition">{weatherData?.weather || 'Light rain'}</p>
+            <p className="feels-like">
+              Feels like {Math.round((weatherData?.temperature || 28) + 4)}°
+            </p>
+          </div>
+        </div>
+
+        <div className="weather-description">
+          <p>Expect scattered rain showers. The low will be {Math.round((weatherData?.temperature || 28) - 1)}°.</p>
+        </div>
+
+        {/* Weather metrics grid */}
+        <div className="weather-metrics">
+          <div className="metric">
+            <Activity className="metric-icon air-quality" />
+            <div className="metric-info">
+              <span className="metric-label">Air quality</span>
+              <span className="metric-value">149</span>
+            </div>
+          </div>
+
+          <div className="metric">
+            <Wind className="metric-icon" />
+            <div className="metric-info">
+              <span className="metric-label">Wind</span>
+              <span className="metric-value">{Math.round(weatherData?.windSpeed || 2)} km/h</span>
+            </div>
+          </div>
+
+          <div className="metric">
+            <Droplets className="metric-icon" />
+            <div className="metric-info">
+              <span className="metric-label">Humidity</span>
+              <span className="metric-value">{Math.round(weatherData?.humidity || 84)}%</span>
+            </div>
+          </div>
+
+          <div className="metric">
+            <Eye className="metric-icon" />
+            <div className="metric-info">
+              <span className="metric-label">Visibility</span>
+              <span className="metric-value">2.5 km</span>
+            </div>
+          </div>
+
+          <div className="metric">
+            <Gauge className="metric-icon" />
+            <div className="metric-info">
+              <span className="metric-label">Pressure</span>
+              <span className="metric-value">{weatherData?.pressure || 1005} mb</span>
+            </div>
+          </div>
+
+          <div className="metric">
+            <Thermometer className="metric-icon" />
+            <div className="metric-info">
+              <span className="metric-label">Dew point</span>
+              <span className="metric-value">26°</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Forecast tabs */}
+      <div className="forecast-tabs">
+        <button 
+          className={`tab ${selectedTimeframe === 'hourly' ? 'active' : ''}`}
+          onClick={() => setSelectedTimeframe('hourly')}
+        >
+          Hourly
+        </button>
+        <button 
+          className={`tab ${selectedTimeframe === 'daily' ? 'active' : ''}`}
+          onClick={() => setSelectedTimeframe('daily')}
+        >
+          Overview
+        </button>
+        <button 
+          className={`tab ${selectedTimeframe === 'precipitation' ? 'active' : ''}`}
+          onClick={() => setSelectedTimeframe('precipitation')}
+        >
+          Precipitation
+        </button>
+        <button 
+          className={`tab ${selectedTimeframe === 'wind' ? 'active' : ''}`}
+          onClick={() => setSelectedTimeframe('wind')}
+        >
+          Wind
+        </button>
+        <button 
+          className={`tab ${selectedTimeframe === 'air-quality' ? 'active' : ''}`}
+          onClick={() => setSelectedTimeframe('air-quality')}
+        >
+          Air Quality
+        </button>
+        <button 
+          className={`tab ${selectedTimeframe === 'humidity' ? 'active' : ''}`}
+          onClick={() => setSelectedTimeframe('humidity')}
+        >
+          Humidity
+        </button>
+        <button 
+          className={`tab ${selectedTimeframe === 'cloud-cover' ? 'active' : ''}`}
+          onClick={() => setSelectedTimeframe('cloud-cover')}
+        >
+          Cloud cover
+        </button>
+      </div>
+
+      {/* 7-day forecast */}
+      <div className="weekly-forecast">
+        {forecastData?.forecasts?.slice(0, 6).map((day, index) => {
+          const date = new Date();
+          date.setDate(date.getDate() + index);
+          const dayName = index === 0 ? 'Today' : 
+                         index === 1 ? 'Sun' :
+                         index === 2 ? 'Mon' :
+                         index === 3 ? 'Tue' :
+                         index === 4 ? 'Wed' :
+                         index === 5 ? 'Thu' : 'Fri';
+          
+          return (
+            <div key={index} className="day-forecast">
+              <div className="day-header">
+                <span className="day-number">{20 + index}</span>
+                <span className="day-name">{dayName}</span>
+              </div>
+              <div className="day-weather">
+                <div className="weather-icons">
+                  <CloudRain className="weather-icon-small primary" />
+                  <CloudRain className="weather-icon-small secondary" />
+                </div>
+                <div className="temperatures">
+                  <span className="temp-high">{day.tempMax || (32 - index)}°</span>
+                  <span className="temp-low">{day.tempMin || (26 - index)}°</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Detailed hourly view */}
+      {selectedTimeframe === 'hourly' && (
+        <div className="hourly-forecast">
+          <div className="hourly-header">
+            <h3>Today</h3>
+            <div className="time-indicators">
+              {['6 PM', '8 PM', '10 PM', '12 AM', '2 AM', '4 AM', '6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM'].map((time, index) => (
+                <span key={index} className="time-indicator">{time}</span>
+              ))}
+            </div>
+          </div>
+          
+          <div className="hourly-chart">
+            <div className="temperature-line">
+              {hourlyData.slice(0, 12).map((hour, index) => (
+                <div key={index} className="hour-data">
+                  <span className="hour-temp">{hour.temperature}°</span>
+                  <div className="hour-icon">
+                    {React.createElement(getWeatherIcon(hour.condition), { 
+                      className: "hour-weather-icon" 
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="precipitation-bar">
+              {hourlyData.slice(0, 12).map((hour, index) => (
+                <div key={index} className="precip-item">
+                  <span className="precip-percent">{hour.precipitation}%</span>
+                  <div 
+                    className="precip-bar-fill"
+                    style={{ height: `${hour.precipitation}%` }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="weather-insights">
+            <div className="alert-section">
+              <AlertTriangle className="alert-icon" />
+              <span>Thunder... No active alerts</span>
+            </div>
+            
+            <div className="additional-info">
+              <div className="info-item">
+                <Thermometer className="info-icon" />
+                <span>Temperature</span>
+                <TrendingDown className="trend-icon" />
+                <span>Severe weather alerts: 1</span>
+              </div>
+              
+              <div className="moon-info">
+                <Moon className="moon-icon" />
+                <span>Moon phase: Waning Crescent</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detailed weather cards */}
+      <div className="weather-details">
+        <h3>Weather details <span className="timestamp">6:48 PM</span></h3>
+        
+        <div className="details-grid">
+          {/* Temperature Detail */}
+          <div className="detail-card temperature-card">
+            <h4>Temperature</h4>
+            <div className="detail-visual">
+              <div className="temperature-gauge">
+                <div className="gauge-line" style={{ background: 'linear-gradient(90deg, #00d4ff 0%, #00a8cc 100%)' }}>
+                  <div className="gauge-marker" style={{ left: '45%' }}></div>
+                </div>
+              </div>
+              <div className="detail-value">28°</div>
+            </div>
+            <div className="detail-info">
+              <p className="trend">Falling</p>
+              <p>Falling with a low of 27° at 7:00 pm. Tomorrow expected to be similar to today.</p>
+            </div>
+          </div>
+
+          {/* Feels Like Detail */}
+          <div className="detail-card feels-like-card">
+            <h4>Feels like</h4>
+            <div className="detail-visual">
+              <div className="feels-like-gauge">
+                <div className="gauge-line" style={{ background: 'linear-gradient(90deg, #a0c4ff 0%, #bdb2ff 100%)' }}>
+                  <div className="gauge-marker" style={{ left: '60%' }}></div>
+                </div>
+              </div>
+              <div className="detail-value">32°</div>
+            </div>
+            <div className="detail-info">
+              <p className="trend">Slightly Warm</p>
+              <p>Feels warmer than the actual temperature due to the humidity.</p>
+              <p className="sub-info">Dominant factor: humidity</p>
+              <p className="temperature-breakdown">Temperature: 28°</p>
+            </div>
+          </div>
+
+          {/* Cloud Cover Detail */}
+          <div className="detail-card cloud-card">
+            <h4>Cloud cover</h4>
+            <div className="detail-visual">
+              <div className="cloud-visual">
+                <div className="cloud-circle">
+                  <div className="cloud-fill" style={{ 
+                    background: 'conic-gradient(#4a90e2 0deg 360deg, #e0e7ff 360deg)' 
+                  }}>
+                    <span className="cloud-text">Cloudy</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="detail-info">
+              <p className="trend">Cloudy (100%)</p>
+              <p>Decreasing with partly cloudy sky at 8:00 pm. Tomorrow expected to see less cloud cover than today.</p>
+            </div>
+          </div>
+
+          {/* More detail cards... */}
+          <div className="detail-card precipitation-card">
+            <h4>Precipitation</h4>
+            <div className="detail-visual">
+              <div className="precipitation-chart">
+                <div className="precip-amount">1.88 <span className="unit">cm</span></div>
+                <div className="precip-period">In next 24h</div>
+                <div className="precip-visual">
+                  <div className="rain-animation">
+                    {[...Array(10)].map((_, i) => (
+                      <div key={i} className="rain-line" style={{
+                        left: `${i * 10}%`,
+                        animationDelay: `${i * 0.1}s`
+                      }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="detail-info">
+              <p className="trend">Light rain</p>
+              <p>Heavier rain soon</p>
+            </div>
+          </div>
+
+          <div className="detail-card wind-card">
+            <h4>Wind</h4>
+            <div className="detail-visual">
+              <div className="wind-compass">
+                <div className="compass-ring">
+                  <div className="compass-needle" style={{ transform: 'rotate(0deg)' }}>
+                    <div className="needle-arrow"></div>
+                  </div>
+                  <span className="compass-n">N</span>
+                  <span className="compass-s">S</span>
+                  <span className="compass-e">E</span>
+                  <span className="compass-w">W</span>
+                </div>
+              </div>
+              <div className="wind-info">
+                <p>From N (0°)</p>
+                <p><span className="wind-speed">2</span> km/h Wind Speed</p>
+                <p><span className="wind-gust">3</span> km/h Wind Gust</p>
+              </div>
+            </div>
+            <div className="detail-info">
+              <p className="trend">Force: 1 (Light Air)</p>
+              <p>Steady with averages holding at 1 km/h (gusts to 5) expected from the NNW through the night.</p>
+            </div>
+          </div>
+
+          <div className="detail-card humidity-card">
+            <h4>Humidity</h4>
+            <div className="detail-visual">
+              <div className="humidity-bars">
+                {[...Array(10)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className="humidity-bar"
+                    style={{ 
+                      height: `${Math.random() * 60 + 40}%`,
+                      backgroundColor: i < 8 ? '#4a90e2' : '#a0c4ff'
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="humidity-percentage">84%</div>
+              <div className="humidity-label">Relative Humidity</div>
+              <div className="dew-point">26° Dew point</div>
+            </div>
+            <div className="detail-info">
+              <p className="trend">Very humid</p>
+              <p>Steady at 90%. Tomorrow's humidity levels are expected to be similar to today.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Suggestions */}
+      <div className="weather-suggestions">
+        <h3>SUGGESTIONS FOR YOUR DAY</h3>
+        <button className="suggestions-btn">
+          View farming recommendations based on weather
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default WeatherDashboard;

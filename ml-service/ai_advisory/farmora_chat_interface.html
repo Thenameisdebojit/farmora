@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmora AI Advisory Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 20px;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px;
+            border-radius: 18px;
+            position: relative;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .message.user .message-content {
+            background: #007bff;
+            color: white;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 10px;
+            font-weight: bold;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .message.bot .message-avatar {
+            background: #28a745;
+        }
+
+        .message.user .message-avatar {
+            background: #007bff;
+        }
+
+        .recommendations {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #28a745;
+        }
+
+        .recommendations h4 {
+            color: #28a745;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .recommendations ul {
+            margin-left: 15px;
+        }
+
+        .recommendations li {
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+
+        .follow-up-questions {
+            margin-top: 10px;
+        }
+
+        .follow-up-btn {
+            display: inline-block;
+            background: #e9ecef;
+            color: #495057;
+            padding: 5px 10px;
+            border-radius: 15px;
+            margin: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .follow-up-btn:hover {
+            background: #007bff;
+            color: white;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: #007bff;
+        }
+
+        .send-btn, .image-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .send-btn:hover, .image-btn:hover {
+            background: #0056b3;
+        }
+
+        .image-btn {
+            background: #28a745;
+        }
+
+        .image-btn:hover {
+            background: #218838;
+        }
+
+        .image-input {
+            display: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px;
+            font-style: italic;
+            color: #6c757d;
+        }
+
+        .typing-dots {
+            display: inline-block;
+            width: 20px;
+        }
+
+        .typing-dots::after {
+            content: '';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+
+        .status-indicator {
+            padding: 10px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .status-indicator.online {
+            color: #28a745;
+        }
+
+        .status-indicator.offline {
+            color: #dc3545;
+        }
+
+        .image-preview {
+            max-width: 200px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes dots {
+            0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
+            40% { color: black; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
+            60% { text-shadow: .25em 0 0 black, .5em 0 0 rgba(0,0,0,0); }
+            80%, 100% { text-shadow: .25em 0 0 black, .5em 0 0 black; }
+        }
+
+        .confidence-badge {
+            display: inline-block;
+            background: #17a2b8;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 5px;
+        }
+
+        .session-info {
+            font-size: 0.7rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                height: 90vh;
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .input-row {
+                flex-direction: column;
+            }
+            
+            .chat-input, .send-btn, .image-btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🌾 Farmora AI Advisory</h1>
+            <p>Your intelligent agricultural assistant</p>
+            <div class="status-indicator" id="statusIndicator">
+                Connecting to AI service...
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div>Hello! I'm your Farmora AI agricultural advisor. I'm here to help you with:</div>
+                    <div class="recommendations">
+                        <h4>🌱 I can assist with:</h4>
+                        <ul>
+                            <li>Crop cultivation and best practices</li>
+                            <li>Pest and disease identification & management</li>
+                            <li>Soil health and fertilization advice</li>
+                            <li>Weather-related farming decisions</li>
+                            <li>Organic farming techniques</li>
+                            <li>Market trends and crop planning</li>
+                        </ul>
+                    </div>
+                    <div class="follow-up-questions">
+                        <button class="follow-up-btn" onclick="askQuestion('What crops should I plant this season?')">🌱 Seasonal Crops</button>
+                        <button class="follow-up-btn" onclick="askQuestion('Help me identify a pest in my field')">🐛 Pest ID</button>
+                        <button class="follow-up-btn" onclick="askQuestion('Organic farming tips for beginners')">🌿 Organic Tips</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            🤖 AI is thinking<span class="typing-dots">...</span>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="input-row">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Ask me anything about farming..." onkeypress="handleKeyPress(event)">
+                <button class="image-btn" onclick="document.getElementById('imageInput').click()">📷</button>
+                <button class="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+            <input type="file" id="imageInput" class="image-input" accept="image/*" onchange="handleImageSelect(event)">
+            <div id="imagePreview"></div>
+        </div>
+    </div>
+
+    <script>
+        class FarmoraChat {
+            constructor() {
+                this.apiUrl = 'http://localhost:5002/api/chat';
+                this.userId = 'user_' + Math.random().toString(36).substr(2, 9);
+                this.selectedImage = null;
+                this.init();
+            }
+
+            init() {
+                this.checkServiceStatus();
+                this.scrollToBottom();
+            }
+
+            async checkServiceStatus() {
+                try {
+                    const response = await fetch('http://localhost:5002/health');
+                    const status = document.getElementById('statusIndicator');
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        status.textContent = '🟢 AI Service Online';
+                        status.className = 'status-indicator online';
+                    } else {
+                        throw new Error('Service unavailable');
+                    }
+                } catch (error) {
+                    const status = document.getElementById('statusIndicator');
+                    status.textContent = '🔴 AI Service Offline';
+                    status.className = 'status-indicator offline';
+                }
+            }
+
+            addMessage(content, isUser = false, data = {}) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+
+                let messageHTML = `
+                    <div class="message-avatar">${isUser ? '👨‍🌾' : '🤖'}</div>
+                    <div class="message-content">
+                        ${content}
+                `;
+
+                // Add confidence badge for AI responses
+                if (!isUser && data.confidence) {
+                    const confidencePercent = Math.round(data.confidence * 100);
+                    messageHTML += `<span class="confidence-badge">${confidencePercent}% confident</span>`;
+                }
+
+                // Add recommendations if available
+                if (data.recommendations && data.recommendations.length > 0) {
+                    messageHTML += `
+                        <div class="recommendations">
+                            <h4>💡 Recommendations:</h4>
+                            <ul>
+                                ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                // Add follow-up questions
+                if (data.follow_up_questions && data.follow_up_questions.length > 0) {
+                    messageHTML += `<div class="follow-up-questions">`;
+                    data.follow_up_questions.forEach(question => {
+                        messageHTML += `<button class="follow-up-btn" onclick="askQuestion('${question}')">${question}</button>`;
+                    });
+                    messageHTML += `</div>`;
+                }
+
+                // Add session info for debugging (can be removed in production)
+                if (data.session_info) {
+                    messageHTML += `
+                        <div class="session-info">
+                            Session: ${data.session_info.session_id?.substring(0, 8) || 'Unknown'} | 
+                            Messages: ${data.session_info.message_count || 0}
+                        </div>
+                    `;
+                }
+
+                messageHTML += `</div>`;
+                messageDiv.innerHTML = messageHTML;
+
+                messagesContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            showTyping() {
+                document.getElementById('typingIndicator').style.display = 'block';
+                this.scrollToBottom();
+            }
+
+            hideTyping() {
+                document.getElementById('typingIndicator').style.display = 'none';
+            }
+
+            showError(message) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = `Error: ${message}`;
+                messagesContainer.appendChild(errorDiv);
+                this.scrollToBottom();
+            }
+
+            scrollToBottom() {
+                const messagesContainer = document.getElementById('chatMessages');
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            async sendMessage(message = null) {
+                const input = document.getElementById('chatInput');
+                const messageText = message || input.value.trim();
+                
+                if (!messageText && !this.selectedImage) {
+                    return;
+                }
+
+                // Add user message
+                let displayMessage = messageText;
+                if (this.selectedImage) {
+                    displayMessage += '<br><img src="' + this.selectedImage.preview + '" class="image-preview" alt="Uploaded image">';
+                }
+                this.addMessage(displayMessage, true);
+
+                // Clear input
+                input.value = '';
+                this.clearImagePreview();
+
+                // Show typing indicator
+                this.showTyping();
+
+                try {
+                    // Prepare request data
+                    const requestData = {
+                        user_id: this.userId,
+                        message: messageText
+                    };
+
+                    // Add image data if available
+                    if (this.selectedImage) {
+                        requestData.image = this.selectedImage.data;
+                    }
+
+                    // Add location if geolocation is available
+                    if (navigator.geolocation) {
+                        try {
+                            const position = await this.getCurrentPosition();
+                            requestData.location = {
+                                latitude: position.coords.latitude,
+                                longitude: position.coords.longitude,
+                                region: 'Auto-detected' // In real app, use reverse geocoding
+                            };
+                        } catch (geoError) {
+                            console.log('Geolocation not available:', geoError);
+                        }
+                    }
+
+                    // Send request to AI service
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+
+                    this.hideTyping();
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            this.addMessage(data.response.message, false, data.response);
+                        } else {
+                            this.showError(data.error || 'Failed to get AI response');
+                            
+                            // Show fallback response if available
+                            if (data.fallback_response) {
+                                this.addMessage(data.fallback_response.message, false, data.fallback_response);
+                            }
+                        }
+                    } else {
+                        this.showError(`Server error: ${response.status}`);
+                    }
+
+                } catch (error) {
+                    this.hideTyping();
+                    this.showError('Network error. Please check your connection.');
+                    console.error('Chat error:', error);
+                }
+
+                // Clear selected image
+                this.selectedImage = null;
+            }
+
+            getCurrentPosition() {
+                return new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        timeout: 5000,
+                        enableHighAccuracy: false
+                    });
+                });
+            }
+
+            handleImageSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Validate file size (32MB limit)
+                if (file.size > 32 * 1024 * 1024) {
+                    this.showError('Image too large. Maximum size is 32MB.');
+                    return;
+                }
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    this.showError('Please select a valid image file.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Data = e.target.result.split(',')[1];
+                    
+                    this.selectedImage = {
+                        data: base64Data,
+                        preview: e.target.result,
+                        name: file.name
+                    };
+
+                    this.showImagePreview(e.target.result, file.name);
+                };
+
+                reader.readAsDataURL(file);
+            }
+
+            showImagePreview(src, name) {
+                const preview = document.getElementById('imagePreview');
+                preview.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 10px; background: #f8f9fa; border-radius: 10px; margin-top: 10px;">
+                        <img src="${src}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; font-size: 0.9rem;">${name}</div>
+                            <div style="font-size: 0.8rem; color: #6c757d;">Ready to analyze</div>
+                        </div>
+                        <button onclick="farmoraChat.clearImagePreview()" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">✕</button>
+                    </div>
+                `;
+            }
+
+            clearImagePreview() {
+                document.getElementById('imagePreview').innerHTML = '';
+                document.getElementById('imageInput').value = '';
+                this.selectedImage = null;
+            }
+        }
+
+        // Global functions
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            farmoraChat.sendMessage();
+        }
+
+        function askQuestion(question) {
+            farmoraChat.sendMessage(question);
+        }
+
+        function handleImageSelect(event) {
+            farmoraChat.handleImageSelect(event);
+        }
+
+        // Initialize chat when page loads
+        let farmoraChat;
+        document.addEventListener('DOMContentLoaded', () => {
+            farmoraChat = new FarmoraChat();
+        });
+    </script>
+</body>
+</html>

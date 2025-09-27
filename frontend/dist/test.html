@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Crop Advisory System - Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .success {
+            color: #4ade80;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .status {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(74, 222, 128, 0.2);
+            border: 2px solid #4ade80;
+            border-radius: 25px;
+            margin: 10px;
+        }
+        .links {
+            margin-top: 30px;
+        }
+        .links a {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .links a:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success">✅</div>
+        <h1>Smart Crop Advisory System</h1>
+        <h2>Frontend Server is Working!</h2>
+        
+        <div class="status">
+            🌐 Frontend: http://localhost:3000
+        </div>
+        <div class="status">
+            🔧 Backend: http://localhost:5000
+        </div>
+        
+        <p>If you can see this page, your frontend server is running correctly!</p>
+        
+        <div class="links">
+            <a href="/">Go to Main App</a>
+            <a href="http://localhost:5000/health">Check Backend Health</a>
+            <a href="http://localhost:5000/api/status">View API Status</a>
+        </div>
+        
+        <div style="margin-top: 30px; font-size: 14px; opacity: 0.8;">
+            <p>Test Page • Smart Crop Advisory System • 2025</p>
+            <p id="timestamp"></p>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        
+        // Test backend connectivity
+        fetch('http://localhost:5000/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Backend health check:', data);
+                document.querySelector('.status:nth-child(2)').innerHTML += ' ✅';
+            })
+            .catch(error => {
+                console.log('Backend error:', error);
+                document.querySelector('.status:nth-child(2)').innerHTML += ' ❌';
+            });
+    </script>
+</body>
+</html>

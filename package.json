@@ -1,0 +1,57 @@
+
+{
+  "name": "smart-crop-advisory-system",
+  "version": "1.0.0",
+  "description": "AI-powered agricultural assistance platform for smart farming solutions",
+  "main": "index.js",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run preview",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "test": "cd backend && npm test && cd ../frontend && npm test",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "deploy:staging": "echo 'Deploying to staging...' && npm run build:backend && npm run build:frontend",
+    "deploy:production": "echo 'Deploying to production...' && npm run build:backend && npm run build:frontend"
+  },
+  "keywords": [
+    "agriculture",
+    "farming",
+    "ai",
+    "crop-advisory",
+    "smart-farming",
+    "iot",
+    "weather",
+    "market-intelligence",
+    "pest-detection",
+    "irrigation",
+    "consultation"
+  ],
+  "author": "Smart Crop Advisory Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/smart-crop-advisory-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/smart-crop-advisory-system/issues"
+  },
+  "homepage": "https://smartcropadvisory.com",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
+}
